@@ -98,6 +98,22 @@ Low-level calls flagged (expected; safe with require(ok))
 $ myth analyze src/Vault.sol --solv 0.8.26 --execution-timeout 60
 The analysis was completed successfully. No issues were detected.
 ```
+### Slither Findings
+#### Running slither . produced some informational findings:
+- Missing zero-address check in constructor
+    - Impact: If deployed with 0x0 as the owner, the Vault could not be paused/unpaused.
+    - Fix: Add require(_owner != address(0), "owner cannot be zero"); in the constructor.
+
+- Low-level calls used for ETH transfer
+     - Impact: address.call{value: ...} is flagged because it’s a low-level call.
+     - Why safe here: The call return value is checked with require(ok, "ETH transfer failed");.
+     - Note: This is the recommended pattern over transfer/send since they break with gas stipends.
+
+- Owner variable could be immutable
+     - Impact: Minor gas optimization only.
+    - Fix: Change address public owner; → address public immutable owner;.
+
+None of these are critical, but they’re useful refinements for production-ready code.
 
 ## End of Project
 
