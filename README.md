@@ -1,66 +1,104 @@
-## Foundry
+## Day 13 – Security Testing Cheatcodes (ETH Vault)
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+### A compact demo that builds a secure ETH Vault with owner-controlled pause/unpause, reentrancy protection, and a full Foundry test suite (including an attacker contract). This project demonstrates how to combine Solidity best practices with security testing using Foundry cheatcodes and external analyzers like Slither and Mythril.
 
-Foundry consists of:
+### Key Takeaways
+- Implemented an ETH Vault with:
+    - Deposit, withdraw, and withdrawAll functions
+    - Owner-only pause/unpause (emergency stop)
+    - NonReentrant guard for safe ETH transfers
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+- Tested using Foundry cheatcodes:
+    - vm.prank to spoof callers
+    - vm.expectRevert for negative cases
+    - Reentrancy attack simulation with a malicious contract
 
-## Documentation
+- Ran security analysis with Slither and Mythril to catch common bugs.
+- Demonstrated professional workflow for real-world smart contract development.
 
-https://book.getfoundry.sh/
 
-## Usage
-
-### Build
-
-```shell
-$ forge build
-```
-
-### Test
+### Prerequisites
 
 ```shell
-$ forge test
+# Install Foundry
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+
+
+# recommended for security analysis:
+# Install Slither & Mythril via pipx
+sudo apt install pipx -y
+pipx install slither-analyzer
+pipx install mythril
 ```
 
-### Format
+### Contracts & Tests
+
+#### Vault.sol
+- deposit() – deposit ETH, updates balance mapping.
+- withdraw(uint) – withdraw specified ETH amount, CEI pattern + nonReentrant.
+- withdrawAll() – withdraw entire balance.
+- pause() / unpause() – owner-only emergency controls.
+- Uses events for Deposit/Withdraw/Paused.
+
+#### Vault.t.sol
+- test_DepositAndWithdraw() – checks balances and ETH flow.
+- testOnlyOwnerCanPause() – enforces owner-only control.
+- test_PausedBlocksOperations() – ensures paused vault rejects deposits/withdrawals.
+- test_ReentrancyBlocked() – simulates attack via malicious contract; ensures vault funds remain safe.
+
+### Commands to Run
 
 ```shell
-$ forge fmt
+# Format Solidity files
+forge fmt
+
+# Build contracts
+forge build
+
+# Run tests (with verbose traces)
+forge test -vvv
+
+# Gas usage report
+forge test --gas-report
+
+# Snapshot gas costs (for future diffs)
+forge snapshot
+
+# Slither static analysis
+slither .
+
+# Mythril symbolic execution (with timeout)
+myth analyze src/Vault.sol --solv 0.8.26 --execution-timeout 60
 ```
 
-### Gas Snapshots
+### Sample Outputs
 
 ```shell
-$ forge snapshot
+# Build
+[⠊] Compiling...
+[⠒] Compiling 23 files with Solc 0.8.26
+[⠆] Solc 0.8.26 finished in 550ms
+Compiler run successful!
+
+# Tests
+Ran 4 tests for test/Vault.t.sol:VaultTest
+[PASS] test_DepositAndWithdraw()    (gas: ~61k)
+[PASS] testOnlyOwnerCanPause()      (gas: ~24k)
+[PASS] test_PausedBlocksOperations()(gas: ~66k)
+[PASS] test_ReentrancyBlocked()     (gas: ~250k)
+Suite result: ok. 4 passed; 0 failed
+
+# Slither
+Vault.constructor lacks zero-address check (low severity)
+Vault.owner could be immutable (gas optimization)
+Low-level calls flagged (expected; safe with require(ok))
+
+
+$ myth analyze src/Vault.sol --solv 0.8.26 --execution-timeout 60
+The analysis was completed successfully. No issues were detected.
 ```
 
-### Anvil
+## End of Project
 
-```shell
-$ anvil
-```
 
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
